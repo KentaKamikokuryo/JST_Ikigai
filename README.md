@@ -1,1 +1,1 @@
-# JST_Ikigai
+# Ikigai
