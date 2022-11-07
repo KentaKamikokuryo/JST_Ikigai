@@ -1,0 +1,36 @@
+Open Anaconda prompt in Pycharm
+
+Be sure that Ikigai environment is activated
+
+run the following command: pip install openvino-dev[tensorflow2,onnx]
+
+run the following command to verify the installation: mo -h
+If you get no error message, that's good.
+
+run the following command: benchmark_app -h
+If you get no error message, that's good.
+
+run the following command: python -c "from openvino.inference_engine import IECore"
+If you get no error message, that's good.
+
+run the following command to find the path to OpenVino on your compute: python -c "import os,sys;print(os.path.dirname(sys.executable))"
+Copy paste the path.
+
+run the following command to setup the path in windows: set PATH="your_path_here"\Lib\site-packages\openvino\libs;%PATH%
+"your_path_here" need to be replace with the previously copied path
+
+Optional: seems useful to run Jupyter Notebook found on OpenVino repository.
+run the following command: pip install --upgrade -r requirements.txt
+
+Have a look at the folder OpenVinoModels, OpenVinoData and OpenVinoScripts
+This is where I am testing OpenVino with Python. 
+Try to run them and see if they work.
+
+That's all
+
+For more information: 
+
+https://docs.openvino.ai/latest/openvino_docs_install_guides_install_dev_tools.html#doxid-openvino-docs-install-guides-install-dev-tools
+https://pypi.org/project/openvino-dev/
+https://github.com/openvinotoolkit/openvino_notebooks
+
