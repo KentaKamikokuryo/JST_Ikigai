@@ -66,26 +66,24 @@ class ProcessVideo:
 
         self.video_path = video_path
         self.video_name = Path(self.video_path).stem
+        self.cap = cv2.VideoCapture(self.video_path)
+        self._n_frame = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         if not os.path.exists(self.video_path):
             print("Video not found at " + self.video_path)
 
     def read(self, n_frame:  int = 100, resize_param: int = None):
 
-        cap = cv2.VideoCapture(self.video_path)
-
-        self.n_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-        if not n_frame > self.n_frame:
-            self.n_frame = n_frame
+        if not n_frame > self._n_frame:
+            self._n_frame = n_frame
 
         self.data_frame_dict = {}
 
         # Extract all frames
-        for i in range(self.n_frame):
-            print("Extracting frame " + str(i) + "/" + str(self.n_frame))
-            cap.set(1, i)
-            ret, frame = cap.read()
+        for i in range(self._n_frame):
+            print("Extracting frame " + str(i) + "/" + str(self._n_frame))
+            self.cap.set(1, i)
+            ret, frame = self.cap.read()
 
             image_height, image_width = frame.shape[:2]
             if resize_param:
@@ -98,6 +96,10 @@ class ProcessVideo:
             self.image_height, self.image_width, _ = frame.shape
 
         return copy.deepcopy(self.data_frame_dict)
+
+    @property
+    def n_frame(self):
+        return self._n_frame
 
 
 class ProcessVideoV2:

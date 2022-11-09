@@ -6,111 +6,94 @@ import shutil
 
 # TODO: It could be better to integrate existing database class
 
-class IDPersonalized:
-
-    identify_face: list
-    identify_body: list
-    number: int
-    name: str
-
-    def __init__(self, s=None):
-
-        if s in None:
-            pass
-        else:
-            self.__dict__ = json.loads(s)
-
-    def _to_json(self):
-
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
-
-    def save(self, path_folder: str):
-
-        s = self._to_json()
-
-        with open(path_folder + str(self.number) + ".json", "w") as outfile:
-            outfile.write(s)
-
 class Database:
 
-    def __init__(self, path_database_supp: str, name: str):
+    def __init__(self, path_database_supp: str, name: str, id: int):
 
         self.path_database = path_database_supp  # TODO: set the new ReID folder
-        self.identifies_face = []
-        self.identifies_body = []
-        self.image_boxes_face = []
-        self.image_boxes_body = []
         self.name = name
+        self.path_database_json = self.path_database + str(id) + ".json"
 
-        self._load()
+        self.identifies = []
+        self.image_boxes = []
+        self.number = id
 
-    def _load(self):
+    def load(self):
+        """
+        This function is used before calling get_id function
+        :return:
+        """
 
-        self.ids = {}
-        self.images = {}
-        self.names = {}
-        self.identifies = {}
+        self.identifies = []
+        self.image_boxes = []
 
-        self.numbers = []
+        if os.path.exists(self.path_database_json):
+            with open(self.path_database_json, 'r') as openfile:
+                s = openfile.read()
 
-        for file in os.listdir(self.path_database):
-            if file.endswith(".json"):
-                with open(self.path_database + file, "r") as openfile:
-                    s = openfile.read()
-
-            _id = IDPersonalized(s=s)
-
-            self.names[_id.number] = _id.name
-            self.ids[_id.number] = _id
-            self.identifies_face[_id.number] = _id.identify_face
-            self.identifies_body[_id.number] = _id.identify_body
-            self.numbers.append(_id.number)
+            _id = ID(s=s)
+            self.identifies = _id.identify  # Get all identifies
 
             print("ID number in Database: {} - Name: {}".format(_id.number, _id.name))
 
-            img = cv2.imread(self.path_database + str(_id.number) + ".jpg")
-            self.images[_id.number] = img
+            for i in range(len(self.identifies)):
+                img = cv2.imread(self.path_database + str(self.number) + "_" + str(i) + ".jpg")
+                self.image_boxes.append(img)
 
-    def add_id_face(self, identify_face, image_box_face):
+    def get_id(self,
+               identify,
+               image_box,
+               DETECTION_THRESHOLD: float = 0.9,
+               DETECTION_N: int = 5):
 
-        self.identifies_face.append(identify_face)
-        self.image_boxes_body.append(image_box_face)
+        if identify.size == 0:
+            return []
+        if len(image_box) == 0:
+            return []
 
-    def add_id_body(self, identify_body, image_box_body):
+        if len(self.identifies) == 0:
 
-        self.identifies_body.append(identify_body)
-        self.image_boxes_body.append(image_box_body)
+            self.identifies.append(identify[0].tolist())
+            self.image_boxes.append(image_box[0])
 
-    def save(self):
+        similaritys, _ = IDUtilities.get_similarity_nn(identifies_ref={i: [self.identifies[i]] for i in range(len(self.identifies))},
+                                                       identifies_new=identify,
+                                                       n=DETECTION_N)
 
-        if self.name not in self.names.values():
+        similarity = similaritys[0]
 
-            if self.numbers:
-                person_number_new = max(self.numbers) + 1
-            else:
-                person_number_new = 0
+        print("")
+        print("Name: {} - Similarity: {}".format(self.name, similarity))
 
-            _id = IDPersonalized()
-            _id.number = person_number_new
-            _id.name = self.name
-            _id.identify_face = self.identifies_face
-            _id.identify_body = self.identifies_body
+        if similarity < DETECTION_THRESHOLD:
 
-            _id.save(path_folder=self.path_database)
+            self.identifies.append(identify[0].tolist())
+            self.image_boxes.append(image_box[0])
 
-            self.numbers.append(person_number_new)
+    def get_id_simple(self,
+                      identify,
+                      image_box):
 
-            print("New ID number in database: {} - Name: {}".format(_id.number, _id.name))
+        if identify.size == 0 or len(image_box) == 0:
+            return []
 
-            cv2.imwrite(self.path_database + str(_id.number) + "face.jpg", self.image_boxes_face[0])
-            # TODO:
-            cv2.imwrite(self.path_database + str(_id.number) + "body.jpg", self.image_boxes_body[0])
+        self.identifies.append(identify[0].tolist())
+        self.image_boxes.append(image_box[0])
 
-        else:
+    def save(self, image_frame_per_person: int = 0):
 
-            # TODO: Keep thinking about here
+        _id = ID()
+        _id.name = self.name
+        _id.identify = self.identifies
+        _id.number = self.number
+        _id.save(path_folder=self.path_database)
 
-            pass
+        print("New ID number in database: {} - Name: {}".format(_id.number, _id.name))
+        #
+        # for i, image_box in enumerate(self.image_boxes):
+        #
+        #     cv2.imwrite(self.path_database + str(_id.number) + "_" + str(i) + ".jpg", image_box)
+        cv2.imwrite(self.path_database + str(self.number) + ".jpg", self.image_boxes[image_frame_per_person])
 
     def delete(self):
 

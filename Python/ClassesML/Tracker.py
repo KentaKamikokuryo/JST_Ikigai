@@ -11,8 +11,8 @@ class Tracker:
         self.center = []
 
     def _getCenter(self, person):
-        x = person[0] - person[2]
-        y = person[1] - person[3]
+        x = (person[0] + person[2]) / 2
+        y = (person[1] + person[3]) / 2
         return (x, y)
 
     def _getDistance(self, person, index):

@@ -3,6 +3,7 @@ from Classes.Video import ProcessVideo
 from ClassesML.ReIdentification import PersonFaceReidentification, PersonBodyReidentification
 from ClassesML.FaceDetectionModel import *
 from ClassesML.BodyDetectionModel import *
+from ClassesDB.DatabaseSupporters import Database
 
 class ModelFactory:
 
@@ -113,7 +114,7 @@ class BBoxReId:
             # Obtain only those with a highest level of confidence
             if len(self._confidence_results[i]) > 1:
 
-                idx = np.argsort(self._confidence_results[i])[::-1]
+                idx = np.argsort(self._confidence_results[i])
                 self._person_results[i] = [self._person_results[i][idx[0]]]
                 self._confidence_results[i] = [self._confidence_results[i][idx[0]]]
 
@@ -138,29 +139,90 @@ class BBoxReId:
     def confidence_results(self):
         return self._confidence_results
 
+    @property
+    def identifies_results(self):
+        return self._identifies_results
+
+    @property
+    def image_boxes(self):
+        return self._image_boxes
 
 
 path_info = PathInfo()
-
-database_video_names = ["Seiko", "Tomoko", "Takeshi"]
-
+database_video_names = ["Seiko", "Tomoko", "Takashi"]
 video_format = ".mp4"
 
-detection_types = [DetectionType.FACE_BOX_OV, DetectionType.FACE_BOX_RF]
-detection_type = detection_types[0]
-DETECTION_THRESHOLD = 0.8
+detection_types_face = [DetectionType.FACE_BOX_OV, DetectionType.FACE_BOX_RF, DetectionType.FACE_BOX_MP]
+detection_type_face = detection_types_face[0]
 
-data_frame_dict_supporters = {}
+detection_types_body = [DetectionType.BODY_BOX_OV, DetectionType.BODY_BOX_YOLO]
+detection_type_body = detection_types_body[0]
 
-for video_name in database_video_names:
+DETECTION_THRESHOLD = 0.5
+REIDENTIFICATION_THRESHOLD = 0.9
+N_FRAME = 50
+
+#########################################
+# Processing for extracting the face id #
+#########################################
+print("FACE")
+for d, video_name in enumerate(database_video_names):
+
+    data_frame_dict_supporters = {}
 
     print("Getting the video data: {}".format(video_name))
-
+    # Set video for face
+    print("")
+    print("Extracting video frame of {}".format(video_name))
     video = ProcessVideo(video_path=path_info.path_database_video_face + video_name + video_format)
-    data_frame_dict = video.read(n_frame=10)  # Get all frame
+    ALL_N_FRAME = copy.deepcopy(video.n_frame)
+    data_frame_dict_face = video.read(n_frame=ALL_N_FRAME)
 
-    data_frame_dict_supporters[video_name] = data_frame_dict
+    # Set Model for face and Infer
+    fac_face = ModelFactory(detection_type=detection_type_face,
+                            path_model=path_info.path_model,
+                            threshold=DETECTION_THRESHOLD)
+    box_id_face = BBoxReId(data_frame_dict=data_frame_dict_face, fac=fac_face)
+    box_id_face.infer()
 
-fac = ModelFactory(detection_type=DetectionType.FACE_BOX_OV, path_model=path_info.path_model, threshold=0.8)
-box_id = BBoxReId(data_frame_dict=data_frame_dict_supporters["Seiko"], fac=fac)
-box_id.infer()
+    # Set Class for getting database
+    data_base_face = Database(path_database_supp=path_info.path_database_video_fid, name=video_name, id=d)
+
+    for i in range(len(data_frame_dict_face.keys())):
+
+        data_base_face.get_id_simple(identify=box_id_face.identifies_results[i], image_box=box_id_face.image_boxes[i])
+    # TODO: Select one frame as parameter
+    data_base_face.save(image_frame_per_person=0)
+
+#########################################
+# Processing for extracting the body id #
+#########################################
+print("BODY")
+for d, video_name in enumerate(database_video_names):
+
+    data_frame_dict_supporters = {}
+
+    print("Getting the video data: {}".format(video_name))
+    # Set video for body
+    print("")
+    print("Extracting video frame of {}".format(video_name))
+    video = ProcessVideo(video_path=path_info.path_database_video_body + video_name + video_format)
+    ALL_N_FRAME = copy.deepcopy(video.n_frame)
+    data_frame_dict_body = video.read(n_frame=ALL_N_FRAME)
+
+    # Set Model for body and Infer
+    fac_body = ModelFactory(detection_type=detection_type_body,
+                            path_model=path_info.path_model,
+                            threshold=DETECTION_THRESHOLD)
+    box_id_body = BBoxReId(data_frame_dict=data_frame_dict_body, fac=fac_body)
+    box_id_body.infer()
+
+    data_base_body = Database(path_database_supp=path_info.path_database_video_bid, name=video_name, id=d)
+
+    for i in range(len(data_frame_dict_body.keys())):
+
+        data_base_body.get_id_simple(identify=box_id_body.identifies_results[i], image_box=box_id_body.image_boxes[i])
+
+    data_base_body.save(image_frame_per_person=0)
+
+

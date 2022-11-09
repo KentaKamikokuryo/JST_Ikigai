@@ -38,8 +38,8 @@ class IDUtilities:
 
     @staticmethod
     def get_center(person_box):
-        x = person_box[2] - person_box[0]
-        y = person_box[3] - person_box[1]
+        x = (person_box[2] + person_box[0]) / 2
+        y = (person_box[3] + person_box[1]) / 2
         return (x, y)
 
     @staticmethod
