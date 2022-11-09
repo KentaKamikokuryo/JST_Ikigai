@@ -18,9 +18,13 @@ Environments under [Anaconda for Windows](https://www.anaconda.com/distribution/
 # Usage
 
 Run "Python3 0 - DatabaseProcessing.py": That is used to create database for both face and body
+
 Run "Python3 1 - VideoProcessing - Box - ID.py": That is used to obtain and store BBox and ID information
+
 Run "Python3 2 - VideoProcessing - MediaPipe.py": That is used to obtain and store landmark on both face and body
+
 Run "Python3 3 - VideoProcessing - Biomechanics.py": That is used to obtain and store biomechanics information from body
+
 Run "Python3 4 - VideoProcessing - Emotion.py": That is used to obtain emotion information from face
 
 # Note
